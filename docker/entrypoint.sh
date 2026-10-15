@@ -2,7 +2,7 @@
 set -e
 
 if [ -z "$APP_KEY" ]; then
-    echo "APP_KEY no está definido. Genera uno con: docker compose run --rm app php artisan key:generate --show" >&2
+    echo "APP_KEY no está definido. Genera uno con: docker compose run --rm --no-deps --entrypoint php app artisan key:generate --show" >&2
     exit 1
 fi
 
