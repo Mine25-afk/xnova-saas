@@ -62,7 +62,7 @@
             "@php artisan config:clear --ansi",
             "@php vendor/bin/pest"
         ],
-        "lint": "@php vendor/bin/pint --test",
+        "lint": "@php vendor/bin/pint --test app/Tenancy app/Repositories app/Services/Finanzas app/Services/Citas app/DTOs app/Enums app/Exceptions app/Policies app/Support/Minutos.php app/Models app/Providers app/Http/Controllers/Finanzas app/Http/Controllers/Citas app/Http/Controllers/Concerns app/Http/Controllers/Controller.php app/Http/Middleware/ResolveTenant.php app/Http/Middleware/ResolvePublicTenant.php app/Http/Requests/TenantFormRequest.php app/Http/Requests/ListadoRequest.php app/Http/Requests/Finanzas app/Http/Requests/Citas routes/web.php routes/citas.php routes/finanzas.php bootstrap/app.php config/superadmin.php database/factories tests",
         "analyse": "@php vendor/bin/phpstan analyse --memory-limit=1G",
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",

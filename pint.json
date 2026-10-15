@@ -1,0 +1,17 @@
+{
+    "preset": "laravel",
+    "notPath": [
+        "app/Models/Boton.php",
+        "app/Models/Modulo.php",
+        "app/Models/Pantalla.php",
+        "app/Models/Paquete.php",
+        "app/Models/Permiso.php",
+        "app/Models/RoleLog.php",
+        "app/Models/SocioLog.php",
+        "app/Models/SucursalLog.php",
+        "app/Models/Suscripcion.php",
+        "app/Models/UserLog.php",
+        "app/Models/XnovaPaquete.php",
+        "app/Models/XnovaTipo.php"
+    ]
+}

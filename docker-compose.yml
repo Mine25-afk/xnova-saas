@@ -1,0 +1,66 @@
+name: xnova
+
+x-app: &app
+  build:
+    context: .
+    target: app
+  image: xnova-saas:local
+  env_file: .env
+  environment:
+    DB_HOST: postgres
+    LOG_CHANNEL: stderr
+  depends_on:
+    postgres:
+      condition: service_healthy
+  volumes:
+    - storage-public:/var/www/html/storage/app/public
+  restart: unless-stopped
+
+services:
+  app:
+    <<: *app
+    environment:
+      DB_HOST: postgres
+      LOG_CHANNEL: stderr
+      RUN_MIGRATIONS: "true"
+
+  web:
+    build:
+      context: .
+      target: web
+    image: xnova-saas-web:local
+    ports:
+      - "${APP_PORT:-8080}:80"
+    volumes:
+      - storage-public:/var/www/html/public/storage:ro
+    depends_on:
+      - app
+    restart: unless-stopped
+
+  # Recordatorios de citas (citas:enviar-recordatorios cada minuto).
+  scheduler:
+    <<: *app
+    command: ["php", "artisan", "schedule:work"]
+
+  queue:
+    <<: *app
+    command: ["php", "artisan", "queue:work", "--tries=3"]
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-xnova}
+      POSTGRES_USER: ${DB_USERNAME:-xnova}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-xnova} -d ${DB_DATABASE:-xnova}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  storage-public:
