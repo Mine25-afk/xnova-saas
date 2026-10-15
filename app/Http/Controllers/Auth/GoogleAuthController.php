@@ -19,10 +19,10 @@ class GoogleAuthController extends Controller
         /** @var GoogleProvider $driver */
         $driver = Socialite::driver('google');
 
+        // Respeta el bundle de certificados configurado en PHP (útil en Windows sin cacert global).
         $verifyPath = collect([
             ini_get('curl.cainfo') ?: null,
             ini_get('openssl.cafile') ?: null,
-            'C:\\php\\extras\\ssl\\cacert.pem',
         ])->first(fn (?string $path) => filled($path) && is_file($path));
 
         if ($verifyPath) {
@@ -51,22 +51,6 @@ class GoogleAuthController extends Controller
 
     public function callback(Request $request): RedirectResponse
     {
-        $verifyPath = collect([
-            ini_get('curl.cainfo') ?: null,
-            ini_get('openssl.cafile') ?: null,
-            'C:\\php\\extras\\ssl\\cacert.pem',
-        ])->first(fn (?string $path) => filled($path) && is_file($path));
-
-        Log::info('Google authentication runtime info.', [
-            'php_binary' => PHP_BINARY,
-            'php_ini' => php_ini_loaded_file(),
-            'curl_cainfo' => ini_get('curl.cainfo'),
-            'openssl_cafile' => ini_get('openssl.cafile'),
-            'verify_path' => $verifyPath,
-            'curl_loaded' => extension_loaded('curl'),
-            'openssl_loaded' => extension_loaded('openssl'),
-        ]);
-
         try {
             $googleUser = $this->googleDriver()->user();
         } catch (\Throwable $exception) {
@@ -95,21 +79,14 @@ class GoogleAuthController extends Controller
                 ]);
         }
 
-        Log::info('Google authentication callback received.', [
-            'google_id' => $googleUser->getId(),
-            'email' => $email,
-            'name' => $googleUser->getName(),
-        ]);
-
         $user = User::query()
             ->where('google_id', $googleUser->getId())
             ->orWhere('email', $email)
             ->first();
 
         if (! $user || ! filled($user->xnova_id)) {
-            Log::warning('Google authentication denied because user was not found.', [
-                'google_id' => $googleUser->getId(),
-                'email' => $email,
+            // Sin datos personales en el log: solo el id interno, si existe.
+            Log::info('Google authentication redirected to onboarding.', [
                 'user_id' => $user?->id,
             ]);
 
@@ -153,7 +130,6 @@ class GoogleAuthController extends Controller
 
         Log::info('Google authentication user authorized.', [
             'user_id' => $user->id,
-            'email' => $user->email,
         ]);
 
         Auth::guard('web')->login($user, remember: true);
