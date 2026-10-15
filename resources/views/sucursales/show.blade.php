@@ -1,0 +1,150 @@
+@extends('layouts.main')
+
+@section('title', 'Detalles de Sucursal - xNova')
+@section('page-title', 'Configuracion / Sucursales / Detalles')
+
+@section('styles')
+    <link rel="stylesheet" href="{{ asset('css/detalle.css') }}">
+@endsection
+
+@section('content')
+@php
+    $canEditBranch = in_array('configuracion.sucursales.editar', $currentUserPermissionCodes ?? [], true);
+@endphp
+<div class="detail-page">
+    <x-card class="detail-card">
+        <div class="detail-header">
+            <div>
+                <h1 class="detail-title">{{ $sucursal->nombre }}</h1>
+                <p class="detail-subtitle">Consulta la informacion principal de la sucursal y la bitacora simple de acciones registradas.</p>
+            </div>
+
+            <div class="detail-toolbar">
+                @if ($canEditBranch)
+                    <a href="{{ route('sucursales.edit', $sucursal) }}" class="btn btn-primary">
+                        <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm2.92 2.33H5v-.92l8.06-8.06.92.92L5.92 19.58zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>
+                        Editar
+                    </a>
+                @endif
+
+                <a href="{{ route('sucursales.listado') }}" class="btn btn-secondary">
+                    <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg>
+                    Volver
+                </a>
+            </div>
+        </div>
+
+        <div class="detail-body">
+            <section class="detail-panel">
+                <div class="detail-panel-header">
+                    <div class="detail-panel-title">Registro de la sucursal</div>
+                </div>
+
+                <div class="detail-grid">
+                    <article class="detail-item">
+                        <span class="detail-label">Nombre de la sucursal</span>
+                        <span class="detail-value">{{ $sucursal->nombre }}</span>
+                    </article>
+
+                    <article class="detail-item">
+                        <span class="detail-label">Empleados asignados</span>
+                        <span class="detail-value">{{ $sucursal->colaboradores_count }}</span>
+                    </article>
+
+                    <article class="detail-item">
+                        <span class="detail-label">Usuarios asignados</span>
+                        <span class="detail-value">{{ $sucursal->users_count }}</span>
+                    </article>
+
+                    <article class="detail-item">
+                        <span class="detail-label">Fecha de registro</span>
+                        <span class="detail-value">{{ optional($sucursal->created_at)->format('d/m/Y h:i A') ?? 'Sin fecha' }}</span>
+                    </article>
+                </div>
+            </section>
+
+            <section class="detail-panel">
+                <div class="detail-panel-header">
+                    <div class="detail-panel-title">Horario semanal</div>
+                    <div class="detail-panel-copy">Consulta los dias habilitados, su jornada laboral y el receso configurado para esta sucursal.</div>
+                </div>
+
+                <div class="detail-table-wrap">
+                    <table class="detail-table">
+                        <thead>
+                            <tr>
+                                <th>Dia</th>
+                                <th>Jornada</th>
+                                <th>Receso</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($scheduleRows as $row)
+                                <tr>
+                                    <td>{{ $row['nombre'] }}</td>
+                                    <td>
+                                        @if ($row['enabled'])
+                                            {{ $row['hora_inicio'] }} - {{ $row['hora_salida'] }}
+                                        @else
+                                            Libre
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if ($row['enabled'] && filled($row['receso_incio']) && filled($row['receso_salida']))
+                                            {{ $row['receso_incio'] }} - {{ $row['receso_salida'] }}
+                                        @else
+                                            Sin receso
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <span class="detail-status {{ $row['enabled'] ? 'is-active' : 'is-inactive' }}">
+                                            {{ $row['enabled'] ? 'Habilitado' : 'Libre' }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="detail-empty">No hay un horario configurado para esta sucursal.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="detail-panel">
+                <div class="detail-panel-header">
+                    <div class="detail-panel-title">Bitacora</div>
+                    <div class="detail-panel-copy">Solo se guarda un registro por accion: Crear y Editar.</div>
+                </div>
+
+                <div class="detail-table-wrap">
+                    <table class="detail-table">
+                        <thead>
+                            <tr>
+                                <th>Accion</th>
+                                <th>Fecha</th>
+                                <th>Usuario que modifica</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($sucursal->logs as $log)
+                                <tr>
+                                    <td>{{ $log->Accion }}</td>
+                                    <td>{{ optional($log->Fecha)->format('d/m/Y h:i A') ?? 'Sin fecha' }}</td>
+                                    <td>{{ $log->usuarioModifica?->name ?? 'Sin usuario' }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="3" class="detail-empty">No hay acciones registradas para esta sucursal.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </x-card>
+</div>
+@endsection

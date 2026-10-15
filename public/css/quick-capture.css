@@ -1,0 +1,260 @@
+/* ============================================================
+   Captura rápida — FAB global + modal de 3 toques.
+   Registrar un gasto/ingreso desde cualquier pantalla del panel.
+   Reutiliza los tokens de diseño de layouts/main.blade.php.
+   ============================================================ */
+
+[x-cloak] { display: none !important; }
+
+/* ============ FAB (botón flotante) ============ */
+.qc-fab {
+    position: fixed;
+    right: clamp(16px, 4vw, 32px);
+    bottom: clamp(16px, 4vw, 32px);
+    z-index: 130;
+    width: 58px;
+    height: 58px;
+    border: none;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: #fff;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    box-shadow: 0 14px 30px rgba(68, 97, 242, .38), 0 4px 10px rgba(15, 23, 42, .12);
+    transition: transform .22s cubic-bezier(.22, 1, .36, 1), box-shadow .22s ease;
+}
+.qc-fab svg { width: 26px; height: 26px; transition: transform .3s cubic-bezier(.22, 1, .36, 1); }
+.qc-fab:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 20px 40px rgba(68, 97, 242, .46); }
+.qc-fab:active { transform: scale(.96); }
+.qc-fab:focus-visible { outline: 3px solid var(--primary-ring); outline-offset: 3px; }
+.qc-fab.is-open svg { transform: rotate(45deg); }
+
+/* En móvil lo subimos un poco para no chocar con la barra inferior nativa */
+@media (max-width: 768px) {
+    .qc-fab { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* ============ MODAL ============ */
+.qc-modal {
+    position: fixed; inset: 0; z-index: 160;
+    display: flex; align-items: flex-end; justify-content: center;
+    padding: 0;
+}
+@media (min-width: 640px) {
+    .qc-modal { align-items: center; padding: 20px; }
+}
+.qc-modal__backdrop {
+    position: absolute; inset: 0;
+    background: rgba(15, 23, 42, .55);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+.qc-modal__dialog {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    max-height: calc(100dvh - 24px);
+    overflow: auto;
+    background: var(--surface);
+    border-radius: 22px 22px 0 0;
+    box-shadow: 0 32px 80px rgba(15, 23, 42, .32);
+    display: grid;
+}
+@media (min-width: 640px) {
+    .qc-modal__dialog { border-radius: 22px; }
+}
+
+/* transiciones (Alpine x-transition con clases) */
+.qc-enter { transition: opacity .26s ease, transform .3s cubic-bezier(.22, 1, .36, 1); }
+.qc-enter-start { opacity: 0; transform: translateY(28px); }
+.qc-enter-end { opacity: 1; transform: translateY(0); }
+.qc-leave { transition: opacity .18s ease, transform .2s ease; }
+.qc-leave-start { opacity: 1; transform: translateY(0); }
+.qc-leave-end { opacity: 0; transform: translateY(28px); }
+.qc-fade { transition: opacity .25s ease; }
+.qc-fade-start { opacity: 0; }
+.qc-fade-end { opacity: 1; }
+
+/* ============ HEAD ============ */
+.qc-head {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 20px 22px 6px;
+}
+.qc-head__grab {
+    position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    width: 38px; height: 4px; border-radius: 99px; background: var(--border-strong);
+}
+@media (min-width: 640px) { .qc-head__grab { display: none; } }
+.qc-head__title { font-size: 1.15rem; font-weight: 700; color: var(--text-primary); letter-spacing: -.01em; }
+.qc-head__close {
+    width: 34px; height: 34px; border: none; background: var(--surface-soft);
+    border-radius: 10px; color: var(--text-secondary); cursor: pointer;
+    display: grid; place-items: center; flex-shrink: 0;
+    transition: background .2s ease, color .2s ease;
+}
+.qc-head__close svg { width: 16px; height: 16px; }
+.qc-head__close:hover { background: var(--danger-soft); color: var(--danger); }
+
+.qc-body { padding: 8px 22px 22px; display: grid; gap: 18px; }
+
+/* ============ TOGGLE GASTO / INGRESO ============ */
+.qc-toggle {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+    padding: 5px; border-radius: 14px; background: var(--surface-soft);
+}
+.qc-toggle button {
+    border: none; background: none; cursor: pointer;
+    padding: 11px 0; border-radius: 10px;
+    font: inherit; font-size: .92rem; font-weight: 600; color: var(--text-secondary);
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    transition: background .2s ease, color .2s ease, box-shadow .2s ease;
+}
+.qc-toggle button svg { width: 16px; height: 16px; }
+.qc-toggle button.is-active { background: var(--surface); box-shadow: var(--shadow-xs); }
+.qc-toggle button.is-active[data-tipo="gasto"] { color: var(--danger); }
+.qc-toggle button.is-active[data-tipo="ingreso"] { color: var(--success); }
+
+/* ============ MONTO (input gigante) ============ */
+.qc-amount { text-align: center; padding: 6px 0 2px; }
+.qc-amount__label { font-size: .78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+.qc-amount__field {
+    display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px;
+}
+.qc-amount__currency { font-size: 1.6rem; font-weight: 600; color: var(--text-muted); }
+.qc-amount__input {
+    width: 100%; max-width: 260px;
+    border: none; outline: none; background: transparent;
+    font: inherit; font-size: 2.9rem; font-weight: 700; letter-spacing: -.02em;
+    text-align: center; color: var(--text-primary);
+    -moz-appearance: textfield;
+}
+.qc-amount__input::-webkit-outer-spin-button,
+.qc-amount__input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.qc-amount__input::placeholder { color: var(--border-strong); }
+.qc-amount.is-gasto .qc-amount__input { color: var(--danger); }
+.qc-amount.is-ingreso .qc-amount__input { color: var(--success); }
+
+/* ============ CAMPOS ============ */
+.qc-field { display: grid; gap: 7px; }
+.qc-field__label { font-size: .8rem; font-weight: 600; color: var(--text-secondary); }
+.qc-control {
+    width: 100%; height: 46px; padding: 0 13px;
+    border: 1px solid var(--border); border-radius: 12px;
+    background: var(--surface); color: var(--text-primary);
+    font: inherit; font-size: .92rem; outline: none;
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+.qc-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-ring); }
+
+/* ============ PROPIETARIOS (chips seleccionables) ============ */
+.qc-owners { display: flex; flex-wrap: wrap; gap: 8px; }
+.qc-owner {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px 6px 6px; cursor: pointer;
+    border: 1.5px solid var(--border); border-radius: 99px; background: var(--surface);
+    font: inherit; font-size: .86rem; font-weight: 600; color: var(--text-secondary);
+    transition: border-color .18s ease, color .18s ease, background .18s ease, box-shadow .18s ease;
+}
+.qc-owner:hover { border-color: var(--border-strong); color: var(--text-primary); }
+.qc-owner.is-active { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); box-shadow: 0 0 0 3px var(--primary-ring); }
+.qc-owner__avatar {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    display: grid; place-items: center; color: #fff; font-weight: 700; font-size: .82rem;
+}
+
+/* ============ CUENTAS (tarjetas seleccionables) ============ */
+.qc-cuentas {
+    display: flex; gap: 9px; overflow-x: auto;
+    padding: 2px 2px 6px; margin: 0 -2px;
+    scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch;
+}
+.qc-cuentas::-webkit-scrollbar { height: 5px; }
+.qc-cuentas::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; }
+.qc-acct {
+    flex: 0 0 auto; scroll-snap-align: start;
+    min-width: 150px; max-width: 200px;
+    display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto;
+    align-items: center; gap: 2px 10px;
+    padding: 11px 13px; cursor: pointer; text-align: left;
+    border: 1.5px solid var(--border); border-radius: 14px; background: var(--surface);
+    transition: border-color .18s ease, box-shadow .18s ease, transform .1s ease;
+}
+.qc-acct:hover { border-color: var(--border-strong); }
+.qc-acct:active { transform: scale(.98); }
+.qc-acct.is-active { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-ring); background: var(--primary-soft); }
+.qc-acct__avatar {
+    grid-row: 1 / 3; width: 38px; height: 38px; border-radius: 11px;
+    display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 1.05rem;
+}
+.qc-acct__info { min-width: 0; display: grid; }
+.qc-acct__name { font-size: .92rem; font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qc-acct__owner { font-size: .74rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qc-acct__balance { grid-column: 2; font-size: .8rem; font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
+
+/* ============ BOLSILLOS (chips seleccionables) ============ */
+.qc-bolsillos { display: flex; flex-wrap: wrap; gap: 8px; }
+.qc-chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 8px 13px; cursor: pointer;
+    border: 1.5px solid var(--border); border-radius: 99px; background: var(--surface);
+    font: inherit; font-size: .84rem; font-weight: 600; color: var(--text-secondary);
+    transition: border-color .18s ease, color .18s ease, background .18s ease;
+}
+.qc-chip__ic { width: 15px; height: 15px; opacity: .8; }
+.qc-chip__txt { display: grid; text-align: left; line-height: 1.25; }
+.qc-chip__saldo { font-size: .72rem; font-weight: 500; color: var(--text-muted); }
+.qc-chip__saldo.is-negativo { color: var(--danger); }
+.qc-chip:hover { border-color: var(--border-strong); color: var(--text-primary); }
+.qc-chip.is-active { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+.qc-chip.is-active .qc-chip__saldo:not(.is-negativo) { color: var(--primary); opacity: .75; }
+select.qc-control { appearance: none; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239499a5' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center; background-size: 18px; padding-right: 38px;
+}
+
+/* ============ FAVORITOS ============ */
+.qc-favs { display: flex; flex-wrap: wrap; gap: 8px; }
+.qc-fav {
+    border: 1px solid var(--border); background: var(--surface);
+    border-radius: 99px; padding: 8px 13px; cursor: pointer;
+    font: inherit; font-size: .82rem; font-weight: 600; color: var(--text-secondary);
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: border-color .18s ease, color .18s ease, background .18s ease;
+}
+.qc-fav:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+.qc-fav__dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.qc-fav__dot.is-gasto { background: var(--danger); }
+.qc-fav__dot.is-ingreso { background: var(--success); }
+
+/* ============ DETALLES COLAPSABLES ============ */
+.qc-more {
+    border: none; background: none; cursor: pointer; padding: 4px 0;
+    font: inherit; font-size: .84rem; font-weight: 600; color: var(--primary);
+    display: inline-flex; align-items: center; gap: 6px; justify-self: start;
+}
+.qc-more svg { width: 15px; height: 15px; transition: transform .2s ease; }
+.qc-more.is-open svg { transform: rotate(180deg); }
+.qc-more-panel { display: grid; gap: 14px; }
+
+/* ============ FOOTER / ACCIONES ============ */
+.qc-actions { display: grid; gap: 9px; margin-top: 2px; }
+@media (min-width: 480px) { .qc-actions { grid-template-columns: 1fr auto; } }
+.qc-btn {
+    height: 50px; padding: 0 20px; border: none; border-radius: 13px;
+    font: inherit; font-size: .95rem; font-weight: 700; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    transition: background .2s ease, transform .1s ease, opacity .2s ease;
+}
+.qc-btn svg { width: 18px; height: 18px; }
+.qc-btn--primary { background: var(--primary); color: #fff; }
+.qc-btn--primary:hover { background: var(--primary-dark); }
+.qc-btn--primary:active { transform: scale(.98); }
+.qc-btn--ghost { background: var(--surface-soft); color: var(--text-secondary); }
+.qc-btn--ghost:hover { background: var(--border); color: var(--text-primary); }
+.qc-btn[disabled] { opacity: .55; cursor: not-allowed; }
+
+.qc-empty {
+    text-align: center; padding: 26px 16px; color: var(--text-muted); font-size: .9rem;
+}
+.qc-empty a { color: var(--primary); font-weight: 600; text-decoration: none; }
+.qc-empty a:hover { text-decoration: underline; }
