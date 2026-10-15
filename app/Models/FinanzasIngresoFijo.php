@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Tenancy\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class FinanzasIngresoFijo extends Model
 {
+    use BelongsToTenant;
+
     protected $table = 'finanzas_ingresos_fijos';
 
     protected $fillable = [
@@ -30,11 +33,17 @@ class FinanzasIngresoFijo extends Model
         'active' => 'boolean',
     ];
 
+    /**
+     * @return BelongsTo<FinanzasPropietario, $this>
+     */
     public function propietario(): BelongsTo
     {
         return $this->belongsTo(FinanzasPropietario::class, 'finanzas_propietario_id');
     }
 
+    /**
+     * @return BelongsTo<FinanzasCuenta, $this>
+     */
     public function cuenta(): BelongsTo
     {
         return $this->belongsTo(FinanzasCuenta::class, 'finanzas_cuenta_id');

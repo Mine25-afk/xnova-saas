@@ -4,12 +4,15 @@ namespace App\Services;
 
 use App\Mail\CitaLifecycleMail;
 use App\Models\Cita;
+use App\Tenancy\TenantContext;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class CitaNotificationService
 {
+    public function __construct(private readonly TenantContext $tenant) {}
+
     public function sendCreatedNotification(Cita $cita): void
     {
         $cita->loadMissing($this->relations());
@@ -101,15 +104,47 @@ class CitaNotificationService
             $candidateDates[] = $windowEnd->toDateString();
         }
 
-        /** @var \Illuminate\Database\Eloquent\Collection<int, Cita> $citas */
+        // El comando corre sin sesión: se recorren las empresas con citas candidatas
+        // y cada una se procesa dentro de su propio tenant (nunca mezclando datos).
+        $empresas = Cita::query()
+            ->acrossTenants()
+            ->whereIn('estado_id', Cita::ESTADOS_ACTIVOS)
+            ->whereNull($column)
+            ->where(function ($query) use ($candidateDates): void {
+                foreach ($candidateDates as $fecha) {
+                    $query->orWhereDate('fecha', $fecha);
+                }
+            })
+            ->distinct()
+            ->pluck('xnova_id');
+
+        $sentCount = 0;
+
+        foreach ($empresas as $xnovaId) {
+            $sentCount += $this->tenant->runAs((int) $xnovaId, fn (): int => $this->sendReminderWindowForCurrentTenant(
+                $hoursBefore,
+                $column,
+                $subject,
+                $candidateDates,
+                $windowStart,
+                $windowEnd,
+            ));
+        }
+
+        return $sentCount;
+    }
+
+    protected function sendReminderWindowForCurrentTenant(int $hoursBefore, string $column, string $subject, array $candidateDates, Carbon $windowStart, Carbon $windowEnd): int
+    {
         $citas = Cita::query()
             ->with($this->relations())
-            ->whereIn('estado_id', [
-                Cita::ESTADO_RESERVADA_ID,
-                Cita::ESTADO_AUTORIZADA_ID,
-            ])
+            ->whereIn('estado_id', Cita::ESTADOS_ACTIVOS)
             ->whereNull($column)
-            ->whereIn('fecha', $candidateDates)
+            ->where(function ($query) use ($candidateDates): void {
+                foreach ($candidateDates as $fecha) {
+                    $query->orWhereDate('fecha', $fecha);
+                }
+            })
             ->orderBy('fecha')
             ->orderBy('hora_inicio')
             ->get();
@@ -161,7 +196,6 @@ class CitaNotificationService
         } catch (\Throwable $exception) {
             Log::error('No se pudo enviar correo de cita.', [
                 'cita_id' => $cita->id,
-                'emails' => $emails,
                 'error' => $exception->getMessage(),
             ]);
         }

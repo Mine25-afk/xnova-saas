@@ -60,7 +60,7 @@ class SuscripcionLimiteService
     public function asegurarCupoSucursalesDisponible(int $xnovaId): void
     {
         $actuales = Sucursal::query()
-            ->where('xnova_id', $xnovaId)
+            ->forTenant($xnovaId)
             ->count();
 
         $limite = $this->resolverLimite(
@@ -81,7 +81,7 @@ class SuscripcionLimiteService
     {
         $this->asegurarLimitePruebaGratis(
             $xnovaId,
-            \App\Models\SocioNegocio::query()->where('xnova_id', $xnovaId)->where('tipo', 'C')->count(),
+            \App\Models\SocioNegocio::query()->forTenant($xnovaId)->where('tipo', 'C')->count(),
             self::TRIAL_CLIENTS_LIMIT,
             'Solo puedes registrar 10 clientes durante la prueba gratis.',
         );
@@ -91,7 +91,7 @@ class SuscripcionLimiteService
     {
         $this->asegurarLimitePruebaGratis(
             $xnovaId,
-            \App\Models\SocioNegocio::query()->where('xnova_id', $xnovaId)->where('tipo', 'E')->count(),
+            \App\Models\SocioNegocio::query()->forTenant($xnovaId)->where('tipo', 'E')->count(),
             self::TRIAL_COLLABORATORS_LIMIT,
             'Solo puedes registrar 3 colaboradores durante la prueba gratis.',
         );
@@ -101,7 +101,7 @@ class SuscripcionLimiteService
     {
         $this->asegurarLimitePruebaGratis(
             $xnovaId,
-            \App\Models\Puesto::query()->where('xnova_id', $xnovaId)->count(),
+            \App\Models\Puesto::query()->forTenant($xnovaId)->count(),
             self::TRIAL_POSITIONS_LIMIT,
             'Solo puedes registrar 3 puestos durante la prueba gratis.',
         );
@@ -111,7 +111,7 @@ class SuscripcionLimiteService
     {
         $this->asegurarLimitePruebaGratis(
             $xnovaId,
-            \App\Models\Rol::query()->where('xnova_id', $xnovaId)->count(),
+            \App\Models\Rol::query()->forTenant($xnovaId)->count(),
             self::TRIAL_ROLES_LIMIT,
             'Solo puedes registrar 3 roles durante la prueba gratis.',
         );
@@ -121,7 +121,7 @@ class SuscripcionLimiteService
     {
         $this->asegurarLimitePruebaGratis(
             $xnovaId,
-            \App\Models\Cita::query()->where('xnova_id', $xnovaId)->count(),
+            \App\Models\Cita::query()->forTenant($xnovaId)->count(),
             self::TRIAL_APPOINTMENTS_LIMIT,
             'Solo puedes registrar 20 citas durante la prueba gratis.',
         );

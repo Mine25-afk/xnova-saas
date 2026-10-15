@@ -2,11 +2,17 @@
 
 namespace App\Models;
 
+use App\Tenancy\BelongsToTenant;
+use Database\Factories\CitaFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Cita extends Model
 {
+    /** @use HasFactory<CitaFactory> */
+    use BelongsToTenant, HasFactory;
+
     public const ESTADO_RESERVADA_ID = 1;
 
     public const ESTADO_TERMINADA_ID = 2;
@@ -14,6 +20,9 @@ class Cita extends Model
     public const ESTADO_CANCELADA_ID = 3;
 
     public const ESTADO_AUTORIZADA_ID = 4;
+
+    /** Estados que ocupan agenda (bloquean el horario del colaborador). */
+    public const ESTADOS_ACTIVOS = [self::ESTADO_RESERVADA_ID, self::ESTADO_AUTORIZADA_ID];
 
     protected $table = 'citas';
 
@@ -50,34 +59,44 @@ class Cita extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<SocioNegocio, $this>
+     */
     public function cliente(): BelongsTo
     {
         return $this->belongsTo(SocioNegocio::class, 'cliente_dni', 'dni');
     }
 
+    /**
+     * @return BelongsTo<Colaborador, $this>
+     */
     public function colaborador(): BelongsTo
     {
         return $this->belongsTo(Colaborador::class, 'colaborador_dni', 'dni');
     }
 
+    /**
+     * @return BelongsTo<Sucursal, $this>
+     */
     public function sucursal(): BelongsTo
     {
         return $this->belongsTo(Sucursal::class, 'sucursal_Id');
     }
 
+    /**
+     * @return BelongsTo<Producto, $this>
+     */
     public function producto(): BelongsTo
     {
         return $this->belongsTo(Producto::class, 'producto_id');
     }
 
+    /**
+     * @return BelongsTo<Estado, $this>
+     */
     public function estado(): BelongsTo
     {
         return $this->belongsTo(Estado::class, 'estado_id');
-    }
-
-    public function xnova(): BelongsTo
-    {
-        return $this->belongsTo(Xnova::class, 'xnova_id');
     }
 
     public function nombreClienteMostrado(): string
@@ -113,7 +132,7 @@ class Cita extends Model
 
     public function estaActivaAgenda(): bool
     {
-        return $this->estaReservada() || $this->estaAutorizada();
+        return $this->estaEditable();
     }
 
     public function estaTerminada(): bool

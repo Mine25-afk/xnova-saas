@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\ResolvesCurrentXnova;
+use App\Http\Controllers\Concerns\UsaEmpresaActual;
 use App\Models\User;
 use App\Models\UserLog;
 use App\Models\Xnova;
@@ -17,7 +17,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 
 class UsuarioController extends Controller
 {
-    use ResolvesCurrentXnova;
+    use UsaEmpresaActual;
 
     public function __construct(
         protected SuscripcionLimiteService $suscripcionLimiteService
@@ -55,7 +55,7 @@ class UsuarioController extends Controller
                 'rol:id,nombre',
                 'sucursal:id,nombre',
             ])
-            ->where('xnova_id', $this->currentXnovaId())
+            ->where('xnova_id', $this->empresaId())
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where(function (Builder $innerQuery) use ($search): void {
                     $innerQuery
@@ -108,7 +108,7 @@ class UsuarioController extends Controller
     public function store(Request $request): JsonResponse
     {
         $payload = $this->validarUsuario($request);
-        $this->suscripcionLimiteService->asegurarCupoUsuariosDisponible($this->currentXnovaId());
+        $this->suscripcionLimiteService->asegurarCupoUsuariosDisponible($this->empresaId());
 
         $usuario = User::query()->create([
             'name' => $payload['name'],
@@ -116,7 +116,7 @@ class UsuarioController extends Controller
             'rol_id' => $payload['rol_id'],
             'sucursal_Id' => $payload['sucursal_Id'] ?? null,
             'colaborador_dni' => $payload['colaborador_dni'] ?? null,
-            'xnova_id' => $this->currentXnovaId(),
+            'xnova_id' => $this->empresaId(),
             'password' => null,
             'active' => true,
         ]);
@@ -246,7 +246,7 @@ class UsuarioController extends Controller
 
     protected function validarUsuario(Request $request, ?User $usuario = null): array
     {
-        $xnovaId = $this->currentXnovaId();
+        $xnovaId = $this->empresaId();
 
         return $request->validate([
             'name' => ['required', 'string', 'max:100'],
@@ -300,13 +300,13 @@ class UsuarioController extends Controller
 
     protected function asegurarUsuarioActual(User $usuario): void
     {
-        abort_if((int) $usuario->xnova_id !== $this->currentXnovaId(), 404);
+        $this->authorize('view', $usuario);
     }
 
     protected function usuarioCreadorEmpresaId(): ?int
     {
         $creatorUserId = Xnova::query()
-            ->where('id', $this->currentXnovaId())
+            ->where('id', $this->empresaId())
             ->value('user_id');
 
         return $creatorUserId ? (int) $creatorUserId : null;

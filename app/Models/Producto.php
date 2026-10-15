@@ -2,13 +2,18 @@
 
 namespace App\Models;
 
+use App\Tenancy\BelongsToTenant;
+use Database\Factories\ProductoFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
 class Producto extends Model
 {
+    /** @use HasFactory<ProductoFactory> */
+    use BelongsToTenant, HasFactory;
+
     protected $table = 'productos';
 
     protected $fillable = [
@@ -37,11 +42,9 @@ class Producto extends Model
         return Storage::disk('public')->url($this->imagen_path);
     }
 
-    public function xnova(): BelongsTo
-    {
-        return $this->belongsTo(Xnova::class, 'xnova_id');
-    }
-
+    /**
+     * @return HasMany<Cita, $this>
+     */
     public function citas(): HasMany
     {
         return $this->hasMany(Cita::class, 'producto_id');

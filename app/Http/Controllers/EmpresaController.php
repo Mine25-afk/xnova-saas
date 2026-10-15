@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\ResolvesCurrentXnova;
+use App\Http\Controllers\Concerns\UsaEmpresaActual;
 use App\Models\Xnova;
 use App\Services\PermissionService;
 use Illuminate\Http\RedirectResponse;
@@ -11,7 +11,7 @@ use Illuminate\View\View;
 
 class EmpresaController extends Controller
 {
-    use ResolvesCurrentXnova;
+    use UsaEmpresaActual;
 
     public const MONEDAS_DISPONIBLES = [
         'LPS' => 'Lempiras (LPS)',
@@ -29,7 +29,7 @@ class EmpresaController extends Controller
     {
         $this->autorizarCreador($request);
 
-        $xnova = Xnova::query()->findOrFail($this->currentXnovaId());
+        $xnova = Xnova::query()->findOrFail($this->empresaId());
 
         return view('empresa.preferencias', [
             'xnova' => $xnova,
@@ -48,7 +48,7 @@ class EmpresaController extends Controller
             'moneda_default.in' => 'La moneda seleccionada no es válida.',
         ]);
 
-        $xnova = Xnova::query()->findOrFail($this->currentXnovaId());
+        $xnova = Xnova::query()->findOrFail($this->empresaId());
         $xnova->update($data);
 
         return redirect()->route('empresa.preferencias')->with('status', 'Preferencias guardadas correctamente.');

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\ResolvesCurrentXnova;
+use App\Http\Controllers\Concerns\UsaEmpresaActual;
 use App\Models\Horario;
 use App\Models\HorarioDetalle;
 use App\Models\Sucursal;
@@ -18,7 +18,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 
 class SucursalController extends Controller
 {
-    use ResolvesCurrentXnova;
+    use UsaEmpresaActual;
 
     protected const DAY_LABELS = [
         0 => 'Domingo',
@@ -54,7 +54,6 @@ class SucursalController extends Controller
         $sucursales = Sucursal::query()
             ->select(['id', 'nombre', 'created_at'])
             ->withCount(['users', 'colaboradores'])
-            ->where('xnova_id', $this->currentXnovaId())
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where('nombre', 'like', "%{$search}%");
             })
@@ -91,7 +90,7 @@ class SucursalController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $this->validarSucursal($request);
-        $this->suscripcionLimiteService->asegurarCupoSucursalesDisponible($this->currentXnovaId());
+        $this->suscripcionLimiteService->asegurarCupoSucursalesDisponible($this->empresaId());
 
         $scheduleRows = $data['schedule'];
 
@@ -99,7 +98,7 @@ class SucursalController extends Controller
             $sucursal = Sucursal::query()->create([
                 'nombre' => $data['nombre'],
                 'horario_id' => 0,
-                'xnova_id' => $this->currentXnovaId(),
+                'xnova_id' => $this->empresaId(),
             ]);
 
             $this->syncHorarioForSucursal($sucursal, $scheduleRows);
@@ -171,7 +170,7 @@ class SucursalController extends Controller
                 'required',
                 'string',
                 'max:100',
-                'unique:sucursales,nombre,'.($sucursal?->id ?? 'NULL').',id,xnova_id,'.$this->currentXnovaId(),
+                'unique:sucursales,nombre,'.($sucursal?->id ?? 'NULL').',id,xnova_id,'.$this->empresaId(),
             ],
             'schedule' => ['required', 'array'],
         ];
@@ -331,7 +330,6 @@ class SucursalController extends Controller
     protected function syncHorarioForSucursal(Sucursal $sucursal, array $scheduleRows): void
     {
         $horario = Horario::query()
-            ->where('xnova_id', $sucursal->xnova_id)
             ->when((int) $sucursal->horario_id > 0, fn (Builder $query) => $query->whereKey($sucursal->horario_id))
             ->first();
 
@@ -392,6 +390,6 @@ class SucursalController extends Controller
 
     protected function asegurarSucursalActual(Sucursal $sucursal): void
     {
-        abort_if((int) $sucursal->xnova_id !== $this->currentXnovaId(), 404);
+        $this->authorize('view', $sucursal);
     }
 }

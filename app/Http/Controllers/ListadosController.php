@@ -2,21 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\ResolvesCurrentXnova;
-use App\Models\SocioNegocio;
 use App\Models\Colaborador;
 use App\Models\Estado;
 use App\Models\Producto;
 use App\Models\Rol;
+use App\Models\SocioNegocio;
 use App\Models\Sucursal;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 
+/**
+ * Opciones para los selects con búsqueda. Todas las consultas quedan acotadas
+ * a la empresa activa por el scope de tenant.
+ */
 class ListadosController extends Controller
 {
-    use ResolvesCurrentXnova;
-
     public function obtener(string $tipo, Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -46,7 +47,6 @@ class ListadosController extends Controller
     {
         return Rol::query()
             ->select(['id', 'nombre'])
-            ->where('xnova_id', $this->currentXnovaId())
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where('nombre', 'like', "%{$search}%");
             })
@@ -64,7 +64,6 @@ class ListadosController extends Controller
     {
         return Sucursal::query()
             ->select(['id', 'nombre'])
-            ->where('xnova_id', $this->currentXnovaId())
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where('nombre', 'like', "%{$search}%");
             })
@@ -82,11 +81,8 @@ class ListadosController extends Controller
     {
         return SocioNegocio::query()
             ->select(['dni', 'nombres', 'apellidos', 'active'])
-            ->where('xnova_id', $this->currentXnovaId())
             ->where('tipo', 'E')
-            ->whereHas('colaborador', function (Builder $query): void {
-                $query->where('xnova_id', $this->currentXnovaId());
-            })
+            ->whereHas('colaborador')
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where(function (Builder $subQuery) use ($search): void {
                     $subQuery
@@ -115,7 +111,6 @@ class ListadosController extends Controller
     {
         return SocioNegocio::query()
             ->select(['dni', 'nombres', 'apellidos'])
-            ->where('xnova_id', $this->currentXnovaId())
             ->where('tipo', 'C')
             ->where('active', true)
             ->when($search !== '', function (Builder $query) use ($search): void {
@@ -146,10 +141,8 @@ class ListadosController extends Controller
                 'socio:dni,nombres,apellidos,active',
                 'sucursal:id,nombre',
             ])
-            ->where('xnova_id', $this->currentXnovaId())
             ->whereHas('socio', function (Builder $query) use ($search): void {
                 $query
-                    ->where('xnova_id', $this->currentXnovaId())
                     ->where('tipo', 'E')
                     ->where('active', true)
                     ->when($search !== '', function (Builder $subQuery) use ($search): void {
@@ -200,7 +193,6 @@ class ListadosController extends Controller
     {
         return Producto::query()
             ->select(['id', 'nombre', 'precio'])
-            ->where('xnova_id', $this->currentXnovaId())
             ->where('active', true)
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where('nombre', 'like', "%{$search}%");

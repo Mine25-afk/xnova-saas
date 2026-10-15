@@ -2,22 +2,25 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
+/**
+ * Usuario del sistema. No usa el scope de tenant porque la autenticación debe
+ * poder encontrarlo antes de saber a qué empresa pertenece; el aislamiento se
+ * hace con UserPolicy y filtros explícitos por xnova_id.
+ */
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
     /**
-     * The attributes that are mass assignable.
-     *
      * @var list<string>
      */
     protected $fillable = [
@@ -34,8 +37,6 @@ class User extends Authenticatable
     ];
 
     /**
-     * The attributes that should be hidden for serialization.
-     *
      * @var list<string>
      */
     protected $hidden = [
@@ -44,8 +45,6 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the attributes that should be cast.
-     *
      * @return array<string, string>
      */
     protected function casts(): array
@@ -57,23 +56,48 @@ class User extends Authenticatable
         ];
     }
 
+    /**
+     * @return BelongsTo<Xnova, $this>
+     */
+    public function xnova(): BelongsTo
+    {
+        return $this->belongsTo(Xnova::class, 'xnova_id');
+    }
+
+    /**
+     * @return BelongsTo<Rol, $this>
+     */
     public function rol(): BelongsTo
     {
         return $this->belongsTo(Rol::class, 'rol_id');
     }
 
+    /**
+     * @return BelongsTo<Sucursal, $this>
+     */
     public function sucursal(): BelongsTo
     {
         return $this->belongsTo(Sucursal::class, 'sucursal_Id');
     }
 
+    /**
+     * @return BelongsTo<Colaborador, $this>
+     */
     public function colaborador(): BelongsTo
     {
         return $this->belongsTo(Colaborador::class, 'colaborador_dni', 'dni');
     }
 
+    /**
+     * @return HasMany<UserLog, $this>
+     */
     public function logs(): HasMany
     {
         return $this->hasMany(UserLog::class, 'User_Id');
+    }
+
+    public function perteneceA(?int $xnovaId): bool
+    {
+        return $xnovaId !== null && (int) $this->xnova_id === $xnovaId;
     }
 }

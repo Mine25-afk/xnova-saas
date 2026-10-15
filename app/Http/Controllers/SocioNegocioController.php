@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\ResolvesCurrentXnova;
+use App\Http\Controllers\Concerns\UsaEmpresaActual;
 use App\Models\Colaborador;
 use App\Models\Puesto;
 use App\Models\SocioLog;
@@ -20,7 +20,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 
 class SocioNegocioController extends Controller
 {
-    use ResolvesCurrentXnova;
+    use UsaEmpresaActual;
 
     private const TYPE_CLIENT = 'C';
     private const TYPE_COLLABORATOR = 'E';
@@ -63,7 +63,7 @@ class SocioNegocioController extends Controller
                 'tipo' => $tipo,
                 'active' => true,
                 'es_por_defecto' => false,
-                'xnova_id' => $this->currentXnovaId(),
+                'xnova_id' => $this->empresaId(),
             ]),
             $tipo,
             false
@@ -77,9 +77,9 @@ class SocioNegocioController extends Controller
         $payload = $this->validatePayload($request, $tipo);
 
         if ($this->isCollaboratorType($tipo)) {
-            $this->suscripcionLimiteService->asegurarCupoPruebaColaboradoresDisponible($this->currentXnovaId());
+            $this->suscripcionLimiteService->asegurarCupoPruebaColaboradoresDisponible($this->empresaId());
         } else {
-            $this->suscripcionLimiteService->asegurarCupoPruebaClientesDisponible($this->currentXnovaId());
+            $this->suscripcionLimiteService->asegurarCupoPruebaClientesDisponible($this->empresaId());
         }
 
         $socio = DB::transaction(function () use ($payload, $tipo): SocioNegocio {
@@ -92,7 +92,7 @@ class SocioNegocioController extends Controller
                 'correo' => $payload['correo'],
                 'sexo' => $payload['sexo'],
                 'tipo' => $tipo,
-                'xnova_id' => $this->currentXnovaId(),
+                'xnova_id' => $this->empresaId(),
                 'active' => true,
                 'es_por_defecto' => false,
             ]);
@@ -102,7 +102,7 @@ class SocioNegocioController extends Controller
                     'dni' => $socio->dni,
                     'puesto_id' => $payload['puesto_id'],
                     'sucursal_Id' => $payload['sucursal_Id'],
-                    'xnova_id' => $this->currentXnovaId(),
+                    'xnova_id' => $this->empresaId(),
                 ]);
             }
 
@@ -191,7 +191,7 @@ class SocioNegocioController extends Controller
                     [
                         'puesto_id' => $payload['puesto_id'],
                         'sucursal_Id' => $payload['sucursal_Id'],
-                        'xnova_id' => $this->currentXnovaId(),
+                        'xnova_id' => $this->empresaId(),
                     ]
                 );
             }
@@ -308,7 +308,6 @@ class SocioNegocioController extends Controller
                 'created_at',
             ])
             ->with($this->collaboratorRelationsForType($tipo))
-            ->where('xnova_id', $this->currentXnovaId())
             ->where('tipo', $tipo)
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where(function (Builder $subQuery) use ($search): void {
@@ -346,7 +345,7 @@ class SocioNegocioController extends Controller
 
     private function validatePayload(Request $request, string $tipo, ?SocioNegocio $socio = null): array
     {
-        $xnovaId = $this->currentXnovaId();
+        $xnovaId = $this->empresaId();
         $dniRule = Rule::unique('socio_negocios', 'dni');
 
         if ($socio) {
@@ -392,7 +391,6 @@ class SocioNegocioController extends Controller
     {
         return Puesto::query()
             ->select(['id', 'nombre'])
-            ->where('xnova_id', $this->currentXnovaId())
             ->where('active', true)
             ->orderBy('nombre')
             ->get();
@@ -402,7 +400,6 @@ class SocioNegocioController extends Controller
     {
         return Sucursal::query()
             ->select(['id', 'nombre'])
-            ->where('xnova_id', $this->currentXnovaId())
             ->orderBy('nombre')
             ->get();
     }
@@ -459,7 +456,7 @@ class SocioNegocioController extends Controller
 
     private function asegurarSocioActual(SocioNegocio $socio): void
     {
-        abort_if((int) $socio->xnova_id !== $this->currentXnovaId(), 404);
+        $this->authorize('view', $socio);
     }
 
     private function canManageDefaultRecord(SocioNegocio $socio): bool

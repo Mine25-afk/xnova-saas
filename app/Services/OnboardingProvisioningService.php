@@ -15,6 +15,7 @@ use App\Models\Suscripcion;
 use App\Models\User;
 use App\Models\Xnova;
 use App\Models\XnovaPaquete;
+use App\Tenancy\TenantContext;
 use Carbon\Carbon;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\DB;
@@ -51,6 +52,9 @@ class OnboardingProvisioningService
                 'active' => true,
                 'user_id' => $user->id,
             ]);
+
+            // Desde aquí todo se crea dentro de la empresa nueva (el usuario aún no tiene sesión).
+            app(TenantContext::class)->set((int) $xnova->id);
 
             // 6. Creamos el rol general y le damos todos los permisos.
             $generalRole = Rol::query()->firstOrCreate([

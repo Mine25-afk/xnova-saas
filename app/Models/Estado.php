@@ -6,9 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class Estado extends Model
 {
-    protected $table = "estados";
-    protected $fillable = ["nombre"];
-
     public const CITA_RESERVADA_ID = 1;
 
     public const CITA_TERMINADA_ID = 2;
@@ -16,4 +13,10 @@ class Estado extends Model
     public const CITA_CANCELADA_ID = 3;
 
     public const CITA_AUTORIZADA_ID = 4;
+
+    public $timestamps = false;
+
+    protected $table = 'estados';
+
+    protected $fillable = ['id', 'nombre'];
 }

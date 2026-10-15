@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\ResolvesCurrentXnova;
+use App\Http\Controllers\Concerns\UsaEmpresaActual;
 use App\Models\Colaborador;
 use App\Models\Producto;
 use App\Models\Sucursal;
@@ -12,28 +12,24 @@ use Illuminate\View\View;
 
 class InventoryController extends Controller
 {
-    use ResolvesCurrentXnova;
+    use UsaEmpresaActual;
 
     public function reservation(): View
     {
         $xnova = Xnova::query()
             ->with('tipo:id,tipo')
-            ->findOrFail($this->currentXnovaId());
+            ->findOrFail($this->empresaId());
 
         $activeProducts = Producto::query()
-            ->where('xnova_id', $xnova->id)
             ->where('active', true)
             ->count();
 
         $branches = Sucursal::query()
-            ->where('xnova_id', $xnova->id)
             ->count();
 
         $collaborators = Colaborador::query()
-            ->where('xnova_id', $xnova->id)
-            ->whereHas('socio', function (Builder $query) use ($xnova): void {
+            ->whereHas('socio', function (Builder $query): void {
                 $query
-                    ->where('xnova_id', $xnova->id)
                     ->where('tipo', 'E')
                     ->where('active', true);
             })
@@ -71,7 +67,6 @@ class InventoryController extends Controller
     public function reportes(): View
     {
         $productos = Producto::query()
-            ->where('xnova_id', $this->currentXnovaId())
             ->orderByDesc('active')
             ->orderBy('nombre')
             ->get();

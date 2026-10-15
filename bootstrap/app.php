@@ -1,10 +1,12 @@
 <?php
 
+use App\Exceptions\BusinessRuleException;
+use App\Http\Middleware\EnsureSuperAdmin;
+use App\Http\Middleware\EnsureUserHasPermission;
+use App\Http\Middleware\ResolveTenant;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use App\Http\Middleware\EnsureUserHasPermission;
-use App\Http\Middleware\EnsureSuperAdmin;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -17,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'permission' => EnsureUserHasPermission::class,
             'superadmin' => EnsureSuperAdmin::class,
+            'tenant' => ResolveTenant::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [
@@ -24,5 +27,6 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Las reglas de negocio se reportan al usuario, no al log de errores.
+        $exceptions->dontReport(BusinessRuleException::class);
     })->create();

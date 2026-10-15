@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\ResolvesCurrentXnova;
+use App\Http\Controllers\Concerns\UsaEmpresaActual;
 use App\Models\RoleLog;
 use App\Models\Rol;
 use App\Services\PermissionService;
@@ -14,7 +14,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 
 class RolController extends Controller
 {
-    use ResolvesCurrentXnova;
+    use UsaEmpresaActual;
 
     public function __construct(
         protected PermissionService $permissionService,
@@ -41,7 +41,6 @@ class RolController extends Controller
         $roles = Rol::query()
             ->select(['id', 'nombre', 'created_at'])
             ->withCount(['permisos', 'users'])
-            ->where('xnova_id', $this->currentXnovaId())
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where('nombre', 'like', "%{$search}%");
             })
@@ -69,7 +68,7 @@ class RolController extends Controller
         return view('roles.form', [
             'data' => new Rol(['nombre' => '']),
             'isEditing' => false,
-            'permissionTree' => $this->permissionService->permissionTree($this->currentXnovaId()),
+            'permissionTree' => $this->permissionService->permissionTree($this->empresaId()),
             'selectedPermissionIds' => [],
         ]);
     }
@@ -77,11 +76,11 @@ class RolController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $this->validarRol($request);
-        $this->suscripcionLimiteService->asegurarCupoPruebaRolesDisponible($this->currentXnovaId());
+        $this->suscripcionLimiteService->asegurarCupoPruebaRolesDisponible($this->empresaId());
 
         $rol = Rol::query()->create([
             'nombre' => $data['nombre'],
-            'xnova_id' => $this->currentXnovaId(),
+            'xnova_id' => $this->empresaId(),
         ]);
 
         $rol->permisos()->sync($data['permissions'] ?? []);
@@ -130,7 +129,7 @@ class RolController extends Controller
         return view('roles.form', [
             'data' => $rol->load('permisos'),
             'isEditing' => true,
-            'permissionTree' => $this->permissionService->permissionTree($this->currentXnovaId()),
+            'permissionTree' => $this->permissionService->permissionTree($this->empresaId()),
             'selectedPermissionIds' => $rol->permisos->pluck('id')->map(fn ($id) => (int) $id)->all(),
         ]);
     }
@@ -161,7 +160,7 @@ class RolController extends Controller
                 'required',
                 'string',
                 'max:100',
-                'unique:roles,nombre,'.($rol?->id ?? 'NULL').',id,xnova_id,'.$this->currentXnovaId(),
+                'unique:roles,nombre,'.($rol?->id ?? 'NULL').',id,xnova_id,'.$this->empresaId(),
             ],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['integer', 'exists:permisos,id'],
@@ -187,6 +186,6 @@ class RolController extends Controller
 
     protected function asegurarRolActual(Rol $rol): void
     {
-        abort_if((int) $rol->xnova_id !== $this->currentXnovaId(), 404);
+        $this->authorize('view', $rol);
     }
 }

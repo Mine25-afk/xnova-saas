@@ -2,47 +2,42 @@
 
 namespace App\Providers;
 
+use App\Models\User;
+use App\Models\Xnova;
 use App\Services\NavigationService;
 use App\Services\PermissionService;
 use App\Support\SuperAdmins;
-use Illuminate\Support\ServiceProvider;
+use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
-        //
+        // Una instancia por request/job: el tenant nunca se filtra entre peticiones.
+        $this->app->scoped(TenantContext::class);
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
         View::composer('*', function ($view): void {
-            if (! auth()->check()) {
+            $user = auth()->user();
+
+            if (! $user instanceof User) {
                 return;
             }
 
-            $user = auth()->user();
             $permissionService = app(PermissionService::class);
-            $navigation = app(NavigationService::class)->forUser($user);
-            $permissionCodes = $permissionService->permissionCodesForUser($user);
-            $isCompanyCreator = $permissionService->isCompanyCreator($user);
-            $monedaDefault = $user?->xnova_id
-                ? (\App\Models\Xnova::query()->where('id', $user->xnova_id)->value('moneda_default') ?? 'LPS')
-                : 'LPS';
+            $tenantId = app(TenantContext::class)->id();
+            $empresa = $tenantId !== null ? Xnova::query()->find($tenantId) : null;
 
-            $view->with('layoutNavigation', $navigation);
-            $view->with('currentUserRoleName', $user?->rol?->nombre ?? 'Sin rol');
-            $view->with('currentUserPermissionCodes', $permissionCodes);
-            $view->with('isCompanyCreator', $isCompanyCreator);
+            $view->with('layoutNavigation', app(NavigationService::class)->forUser($user));
+            $view->with('currentUserRoleName', $user->rol?->nombre ?? 'Sin rol');
+            $view->with('currentUserPermissionCodes', $permissionService->permissionCodesForUser($user));
+            $view->with('isCompanyCreator', $permissionService->isCompanyCreator($user));
             $view->with('isSuperAdmin', SuperAdmins::has($user));
-            $view->with('monedaDefault', $monedaDefault);
+            $view->with('monedaDefault', $empresa?->monedaPorDefecto() ?? Xnova::MONEDA_POR_DEFECTO);
         });
     }
 }

@@ -26,6 +26,9 @@ class HorarioDetalle extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Horario, $this>
+     */
     public function horario(): BelongsTo
     {
         return $this->belongsTo(Horario::class, 'horario_id');

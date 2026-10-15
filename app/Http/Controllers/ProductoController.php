@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\ResolvesCurrentXnova;
+use App\Http\Controllers\Concerns\UsaEmpresaActual;
 use App\Models\Producto;
 use App\Services\ProductImageProcessor;
 use Illuminate\Database\Eloquent\Builder;
@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 
 class ProductoController extends Controller
 {
-    use ResolvesCurrentXnova;
+    use UsaEmpresaActual;
 
     public function __construct(
         protected ProductImageProcessor $productImageProcessor
@@ -66,7 +66,7 @@ class ProductoController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $this->validatePayload($request);
-        $data['xnova_id'] = $this->currentXnovaId();
+        $data['xnova_id'] = $this->empresaId();
         $storedImagePath = null;
 
         if ($request->hasFile('imagen')) {
@@ -107,7 +107,7 @@ class ProductoController extends Controller
         $imageToDelete = null;
 
         if ($request->hasFile('imagen')) {
-            $storedImagePath = $this->productImageProcessor->store($request->file('imagen'), $this->currentXnovaId());
+            $storedImagePath = $this->productImageProcessor->store($request->file('imagen'), $this->empresaId());
             $data['imagen_path'] = $storedImagePath;
             $imageToDelete = $producto->imagen_path;
         } elseif ($request->boolean('remove_image')) {
@@ -140,7 +140,7 @@ class ProductoController extends Controller
                 'required',
                 'string',
                 'max:120',
-                'unique:productos,nombre,'.($producto?->id ?? 'NULL').',id,xnova_id,'.$this->currentXnovaId(),
+                'unique:productos,nombre,'.($producto?->id ?? 'NULL').',id,xnova_id,'.$this->empresaId(),
             ],
             'descripcion' => ['nullable', 'string', 'max:255'],
             'precio' => ['required', 'numeric', 'min:0'],
@@ -163,7 +163,6 @@ class ProductoController extends Controller
     {
         return Producto::query()
             ->select(['id', 'nombre', 'descripcion', 'precio', 'active', 'imagen_path', 'created_at'])
-            ->where('xnova_id', $this->currentXnovaId())
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where(function (Builder $subQuery) use ($search): void {
                     $subQuery
@@ -175,6 +174,6 @@ class ProductoController extends Controller
 
     protected function asegurarProductoActual(Producto $producto): void
     {
-        abort_if((int) $producto->xnova_id !== $this->currentXnovaId(), 404);
+        $this->authorize('view', $producto);
     }
 }
