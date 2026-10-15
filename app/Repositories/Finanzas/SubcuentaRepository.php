@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Collection;
 /**
  * @extends BaseRepository<FinanzasSubcuenta>
  */
-final class SubcuentaRepository extends BaseRepository
+class SubcuentaRepository extends BaseRepository
 {
     protected function model(): string
     {

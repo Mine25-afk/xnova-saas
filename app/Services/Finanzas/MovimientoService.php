@@ -13,6 +13,7 @@ use App\Models\FinanzasSubcuenta;
 use App\Repositories\Finanzas\CuentaRepository;
 use App\Repositories\Finanzas\MovimientoRepository;
 use App\Repositories\Finanzas\SubcuentaRepository;
+use Illuminate\Support\Arr;
 
 /**
  * Registro, anulación y confirmación de movimientos financieros.
@@ -30,9 +31,14 @@ final class MovimientoService
         return $this->movimientos->create($this->atributos($data));
     }
 
+    /**
+     * La edición manual no toca el vínculo con deudas/cobros ni el estado pendiente.
+     */
     public function actualizar(FinanzasMovimiento $movimiento, MovimientoData $data): FinanzasMovimiento
     {
-        return $this->movimientos->update($movimiento, $this->atributos($data));
+        $atributos = Arr::except($this->atributos($data), ['finanzas_deuda_id', 'finanzas_cuenta_por_cobrar_id', 'pendiente']);
+
+        return $this->movimientos->update($movimiento, $atributos);
     }
 
     /**

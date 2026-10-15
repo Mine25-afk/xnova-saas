@@ -13,7 +13,7 @@ use Illuminate\Support\Collection as SupportCollection;
 /**
  * @extends BaseRepository<FinanzasMovimiento>
  */
-final class MovimientoRepository extends BaseRepository
+class MovimientoRepository extends BaseRepository
 {
     private const RELACIONES_LISTADO = [
         'propietario:id,nombre',

@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Collection;
 /**
  * @extends BaseRepository<Cita>
  */
-final class CitaRepository extends BaseRepository
+class CitaRepository extends BaseRepository
 {
     public const RELACIONES = [
         'cliente:dni,nombres,apellidos',

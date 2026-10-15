@@ -30,7 +30,8 @@ class CitaController extends Controller
 
     public function index(Request $request, TenantContext $tenant): View
     {
-        $vistaActual = $this->vistas->resolver($request->query('vista'));
+        $vista = $request->query('vista');
+        $vistaActual = $this->vistas->resolver(is_string($vista) ? $vista : null);
         $empresa = Xnova::query()->findOrFail($tenant->idOrFail());
 
         return view('citas.index', [

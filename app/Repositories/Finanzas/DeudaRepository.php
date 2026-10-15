@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Collection;
 /**
  * @extends BaseRepository<FinanzasDeuda>
  */
-final class DeudaRepository extends BaseRepository
+class DeudaRepository extends BaseRepository
 {
     public const ESTADO_PENDIENTE = 'pendiente';
 

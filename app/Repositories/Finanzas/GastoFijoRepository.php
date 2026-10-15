@@ -11,7 +11,7 @@ use Illuminate\Support\Collection as SupportCollection;
 /**
  * @extends BaseRepository<FinanzasGastoFijo>
  */
-final class GastoFijoRepository extends BaseRepository
+class GastoFijoRepository extends BaseRepository
 {
     protected function model(): string
     {

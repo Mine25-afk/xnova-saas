@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 /**
  * @extends BaseRepository<FinanzasCuentaPorCobrar>
  */
-final class CuentaPorCobrarRepository extends BaseRepository
+class CuentaPorCobrarRepository extends BaseRepository
 {
     public const ESTADO_PENDIENTE = 'pendiente';
 
